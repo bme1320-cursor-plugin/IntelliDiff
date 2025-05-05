@@ -8,197 +8,207 @@ import axios from 'axios';
  * Service to manage the Python AI server
  */
 export class PythonService {
-  private serverProcess: ChildProcess | null = null;
-  private readonly port: number = 5000;
-  private readonly maxStartupAttempts: number = 3;
-  private startupAttempts: number = 0;
+    private serverProcess: ChildProcess | null = null;
+    private readonly port: number = 5000;
+    private readonly maxStartupAttempts: number = 3;
+    private startupAttempts: number = 0;
 
-  /**
-   * Start the Python server
-   */
-  public async startServer(): Promise<void> {
-    if (this.serverProcess) {
-      return; // Server is already running
-    }
-
-    try {
-      // Create Python script files
-      await this.createPythonFiles();
-      
-      // Start the server
-      await this.spawnServer();
-      
-      // Wait for server to be ready
-      await this.waitForServerReady();
-      
-      this.startupAttempts = 0; // Reset counter on successful start
-    } catch (error) {
-      this.startupAttempts++;
-      
-      if (this.startupAttempts < this.maxStartupAttempts) {
-        console.log(`Retry starting Python server (attempt ${this.startupAttempts})...`);
-        await this.stopServer(); // Ensure previous attempt is cleaned up
-        return this.startServer(); // Recursive retry
-      }
-      
-      console.error('Failed to start Python server after multiple attempts:', error);
-      throw new Error('Failed to start AI analysis server');
-    }
-  }
-
-  /**
-   * Create required Python script files
-   */
-  private async createPythonFiles(): Promise<void> {
-    const extensionContext = this.getExtensionContext();
-    const pythonDirPath = path.join(extensionContext.extensionPath, 'python');
-    
-    try {
-      // Create python directory if it doesn't exist
-      await fs.mkdir(pythonDirPath, { recursive: true });
-      
-      // Create server.py file
-      const serverPyPath = path.join(pythonDirPath, 'server.py');
-      await fs.writeFile(serverPyPath, this.getServerPyContent());
-      
-      // Create analyzer.py file
-      const analyzerPyPath = path.join(pythonDirPath, 'analyzer.py');
-      await fs.writeFile(analyzerPyPath, this.getAnalyzerPyContent());
-      
-      // Create requirements.txt file
-      const requirementsPath = path.join(pythonDirPath, 'requirements.txt');
-      await fs.writeFile(requirementsPath, this.getRequirementsContent());
-      
-    } catch (error) {
-      console.error('Error creating Python files:', error);
-      throw new Error('Failed to create Python files');
-    }
-  }
-
-  /**
-   * Spawn the Python server process
-   */
-  private async spawnServer(): Promise<void> {
-    const extensionContext = this.getExtensionContext();
-    const pythonDirPath = path.join(extensionContext.extensionPath, 'python');
-    const serverPyPath = path.join(pythonDirPath, 'server.py');
-    
-    // Get Python executable path
-    const pythonPath = await this.getPythonPath();
-    
-    // Start the server process
-    this.serverProcess = spawn(pythonPath, [serverPyPath], {
-      cwd: pythonDirPath,
-      env: { ...process.env, PORT: this.port.toString() }
-    });
-    
-    // Handle process events
-    this.serverProcess.stdout?.on('data', (data) => {
-      console.log(`Python server stdout: ${data}`);
-    });
-    
-    this.serverProcess.stderr?.on('data', (data) => {
-      console.error(`Python server stderr: ${data}`);
-    });
-    
-    this.serverProcess.on('error', (error) => {
-      console.error('Python server process error:', error);
-    });
-    
-    this.serverProcess.on('close', (code) => {
-      console.log(`Python server process exited with code ${code}`);
-      this.serverProcess = null;
-    });
-  }
-
-  /**
-   * Wait for the server to be ready
-   */
-  private async waitForServerReady(): Promise<void> {
-    const maxRetries = 10;
-    const retryInterval = 500; // ms
-    
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        const response = await axios.get(`http://localhost:${this.port}/health`);
-        if (response.status === 200 && response.data.status === 'ok') {
-          console.log('Python server is ready');
-          return;
+    /**
+     * Start the Python server
+     */
+    public async startServer(): Promise<void> {
+        if (this.serverProcess) {
+            return; // Server is already running
         }
-      } catch (error) {
-        // Server not ready yet, wait and retry
-        await new Promise(resolve => setTimeout(resolve, retryInterval));
-      }
-    }
-    
-    throw new Error('Timed out waiting for Python server to be ready');
-  }
 
-  /**
-   * Stop the Python server
-   */
-  public async stopServer(): Promise<void> {
-    if (!this.serverProcess) {
-      return; // Server is not running
-    }
-    
-    try {
-      // Try to gracefully shutdown the server
-      await axios.post(`http://localhost:${this.port}/shutdown`).catch(() => {});
-      
-      // Give the server a chance to shutdown gracefully
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Force kill if still running
-      if (this.serverProcess) {
-        this.serverProcess.kill();
-        this.serverProcess = null;
-      }
-    } catch (error) {
-      console.error('Error stopping Python server:', error);
-      
-      // Force kill as fallback
-      if (this.serverProcess) {
-        this.serverProcess.kill();
-        this.serverProcess = null;
-      }
-    }
-  }
 
-  /**
-   * Get Python executable path
-   */
-  private async getPythonPath(): Promise<string> {
-    // Try to get Python path from settings
-    const config = vscode.workspace.getConfiguration('intellidiff');
-    const pythonPath = config.get<string>('pythonPath');
-    
-    if (pythonPath) {
-      return pythonPath;
-    }
-    
-    // Default to 'python3' or 'python' based on platform
-    return process.platform === 'win32' ? 'python' : 'python3';
-  }
+        try {
+            console.log('Async Starting Python server...');
+            // Create Python script files
+            await this.createPythonFiles();
+            console.log('Python files created successfully');
 
-  /**
-   * Get the extension context
-   */
-  private getExtensionContext(): vscode.ExtensionContext {
-    const extension = vscode.extensions.getExtension('intellidiff.intellidiff');
-    
-    if (!extension) {
-      throw new Error('Extension context not available');
-    }
-    
-    return extension.exports.getContext();
-  }
+            // Start the server
+            await this.spawnServer();
+            console.log('Python server process spawned successfully');
 
-  /**
-   * Get server.py content
-   */
-  private getServerPyContent(): string {
-    return `#!/usr/bin/env python3
+            // Wait for server to be ready
+            await this.waitForServerReady();
+            console.log('Python server is ready');
+
+            this.startupAttempts = 0; // Reset counter on successful start
+        } catch (error) {
+            this.startupAttempts++;
+
+            if (this.startupAttempts < this.maxStartupAttempts) {
+                console.log(`Retry starting Python server (attempt ${this.startupAttempts})...`);
+                await this.stopServer(); // Ensure previous attempt is cleaned up
+                return this.startServer(); // Recursive retry
+            }
+
+            console.error('Failed to start Python server after multiple attempts:', error);
+            throw new Error('Failed to start AI analysis server');
+        }
+    }
+
+    /**
+     * Create required Python script files
+     */
+    private async createPythonFiles(): Promise<void> {
+        console.log('Creating Python files...');
+        const extensionContext = this.getExtensionContext();
+        console.log('Extension context:', extensionContext);
+        const pythonDirPath = path.join(extensionContext.extensionPath, 'python');
+        console.log('Creating Python files in:', pythonDirPath);
+
+        try {
+            // Create python directory if it doesn't exist
+            await fs.mkdir(pythonDirPath, { recursive: true });
+
+            // Create server.py file
+            const serverPyPath = path.join(pythonDirPath, 'server.py');
+            await fs.writeFile(serverPyPath, this.getServerPyContent());
+
+            // Create analyzer.py file
+            const analyzerPyPath = path.join(pythonDirPath, 'analyzer.py');
+            await fs.writeFile(analyzerPyPath, this.getAnalyzerPyContent());
+
+            // Create requirements.txt file
+            const requirementsPath = path.join(pythonDirPath, 'requirements.txt');
+            await fs.writeFile(requirementsPath, this.getRequirementsContent());
+
+        } catch (error) {
+            console.error('Error creating Python files:', error);
+            throw new Error('Failed to create Python files');
+        }
+    }
+
+    /**
+     * Spawn the Python server process
+     */
+    private async spawnServer(): Promise<void> {
+        const extensionContext = this.getExtensionContext();
+        const pythonDirPath = path.join(extensionContext.extensionPath, 'python');
+        const serverPyPath = path.join(pythonDirPath, 'server.py');
+        console.log('Starting Python server at:', serverPyPath);
+
+        // Get Python executable path
+        const pythonPath = await this.getPythonPath();
+
+        // Start the server process
+        this.serverProcess = spawn(pythonPath, [serverPyPath], {
+            cwd: pythonDirPath,
+            env: { ...process.env, PORT: this.port.toString() }
+        });
+
+        // Handle process events
+        this.serverProcess.stdout?.on('data', (data) => {
+            console.log(`Python server stdout: ${data}`);
+        });
+
+        this.serverProcess.stderr?.on('data', (data) => {
+            console.error(`Python server stderr: ${data}`);
+        });
+
+        this.serverProcess.on('error', (error) => {
+            console.error('Python server process error:', error);
+        });
+
+        this.serverProcess.on('close', (code) => {
+            console.log(`Python server process exited with code ${code}`);
+            this.serverProcess = null;
+        });
+    }
+
+    /**
+     * Wait for the server to be ready
+     */
+    private async waitForServerReady(): Promise<void> {
+        const maxRetries = 10;
+        const retryInterval = 500; // ms
+
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const response = await axios.get(`http://localhost:${this.port}/health`);
+                if (response.status === 200 && response.data.status === 'ok') {
+                    console.log('Python server is ready');
+                    return;
+                }
+            } catch (error) {
+                // Server not ready yet, wait and retry
+                await new Promise(resolve => setTimeout(resolve, retryInterval));
+            }
+        }
+
+        throw new Error('Timed out waiting for Python server to be ready');
+    }
+
+    /**
+     * Stop the Python server
+     */
+    public async stopServer(): Promise<void> {
+        if (!this.serverProcess) {
+            return; // Server is not running
+        }
+
+        try {
+            // Try to gracefully shutdown the server
+            await axios.post(`http://localhost:${this.port}/shutdown`).catch(() => { });
+
+            // Give the server a chance to shutdown gracefully
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Force kill if still running
+            if (this.serverProcess) {
+                this.serverProcess.kill();
+                this.serverProcess = null;
+            }
+        } catch (error) {
+            console.error('Error stopping Python server:', error);
+
+            // Force kill as fallback
+            if (this.serverProcess) {
+                this.serverProcess.kill();
+                this.serverProcess = null;
+            }
+        }
+    }
+
+    /**
+     * Get Python executable path
+     */
+    private async getPythonPath(): Promise<string> {
+        // Try to get Python path from settings
+        const config = vscode.workspace.getConfiguration('intellidiff');
+        const pythonPath = config.get<string>('pythonPath');
+
+        if (pythonPath) {
+            return pythonPath;
+        }
+
+        // Default to 'python3' or 'python' based on platform
+        return process.platform === 'win32' ? 'python' : 'python3';
+    }
+
+    /**
+     * Get the extension context
+     */
+    private getExtensionContext(): vscode.ExtensionContext {
+        const extension = vscode.extensions.getExtension('intellidiff.intellidiff');
+        extension?.activate()
+
+        if (!extension) {
+            throw new Error('Extension context not available');
+        }
+
+        return extension.exports.getContext();
+    }
+
+    /**
+     * Get server.py content
+     */
+    private getServerPyContent(): string {
+        return `#!/usr/bin/env python3
 import os
 import json
 import sys
@@ -255,13 +265,13 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='127.0.0.1', port=port)
 `;
-  }
+    }
 
-  /**
-   * Get analyzer.py content
-   */
-  private getAnalyzerPyContent(): string {
-    return `#!/usr/bin/env python3
+    /**
+     * Get analyzer.py content
+     */
+    private getAnalyzerPyContent(): string {
+        return `#!/usr/bin/env python3
 import os
 import re
 import difflib
@@ -623,14 +633,14 @@ class CodeAnalyzer:
         
         return f"There are {added} lines added and {removed} lines removed in this change."
 `;
-  }
+    }
 
-  /**
-   * Get requirements.txt content
-   */
-  private getRequirementsContent(): string {
-    return `flask==2.0.1
+    /**
+     * Get requirements.txt content
+     */
+    private getRequirementsContent(): string {
+        return `flask==2.0.1
 difflib-sequence-matcher==1.0
 `;
-  }
+    }
 }

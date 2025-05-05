@@ -14,6 +14,17 @@
 		},
 		{
 			"type": "npm",
+			"script": "webpack",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"problemMatcher": [],
+			"label": "npm: webpack",
+			"detail": "webpack"
+		},
+		{
+			"type": "npm",
 			"script": "install",
 			"group": {
 				"kind": "build",
@@ -22,6 +33,19 @@
 			"problemMatcher": [],
 			"label": "npm: install",
 			"detail": "install dependencies"
+		},
+		{
+			"label": "npm: install and webpack",
+			"dependsOn": [
+				"npm: install",
+				"npm: webpack"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"problemMatcher": [],
+			"detail": "Run install and then webpack"
 		},
 		{
 			"label": "npm: install and build",

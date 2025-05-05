@@ -9,10 +9,23 @@
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "name": "Launch Extension",
+            "runtimeExecutable": "${execPath}",
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
             ],
             "preLaunchTask": "npm: install and build",
+            "request": "launch",
+            "type": "extensionHost"
+        },
+        {
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "name": "Debug Extension",
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ],
+            "preLaunchTask": "npm: install and webpack",
             "request": "launch",
             "type": "extensionHost"
         }
