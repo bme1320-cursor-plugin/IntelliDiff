@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "publisher": "intellidiff",
   "description": "Advanced Git diff tool with AI-powered code change analysis",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rhfeiyang/intellidiff.git"
+  },
   "author": {
     "name": "IntelliDiff Team"
   },
