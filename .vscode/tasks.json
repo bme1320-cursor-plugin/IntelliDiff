@@ -11,6 +11,30 @@
 			"problemMatcher": [],
 			"label": "npm: compile",
 			"detail": "webpack"
+		},
+		{
+			"type": "npm",
+			"script": "install",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"problemMatcher": [],
+			"label": "npm: install",
+			"detail": "install dependencies"
+		},
+		{
+			"label": "npm: install and build",
+			"dependsOn": [
+				"npm: install",
+				"npm: compile"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"problemMatcher": [],
+			"detail": "Run install and then build"
 		}
-	]
+	],
 }
